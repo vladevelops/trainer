@@ -180,11 +180,11 @@ func PrintFl(format string, a ...any) {
 	fmt.Printf(format, a...)
 	fmt.Println()
 }
-func TODO(format string) {
+func TODO(format ...any) {
 	fmt.Println()
 	_, f_name, f_line, _ := runtime.Caller(1)
 	fmt.Printf("%v:%v \n", f_name, f_line)
-	fmt.Printf(format)
+	fmt.Printf("%s", format...)
 	fmt.Println()
 	log.Fatal()
 }
