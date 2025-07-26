@@ -1,12 +1,11 @@
 # PHASES its not mandatory  
 PHASES: -d 10m -r 15s -w 60s {
-  worm-up: -d 10m -r 15s -w 60s { # owerwrides
-    jumps: -d 45s  r 15s # owerwrides
-    squots
-    push-ups
+  worm-up: -d 10m -r 5s -w 30s { # owerwrides
+    jumps: -d 45s -r 15s, # owerwrides
+    squots, push-ups
   }
-  workout: {}
-  cool-down:{}
+#  workout: {}
+#  cool-down:{}
 }
 
 

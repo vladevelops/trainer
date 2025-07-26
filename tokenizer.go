@@ -84,7 +84,7 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 
 			switch char {
 
-			case ":", "{", "}":
+			case ":", "{", "}", ",":
 
 				if len(accomulator) != 0 && accomulator != " " {
 					t.tokens = append(t.tokens, accomulator)
