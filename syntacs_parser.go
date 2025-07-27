@@ -8,8 +8,8 @@ import (
 
 type WorkoutDurationsConfigs struct {
 	TimeDuration string
-	TimeREST     string
-	TimeWORKOUT  string
+	TimeRest     string
+	TimeWorkout  string
 }
 type SingleWorkout struct {
 	WorkoutName string
@@ -42,8 +42,8 @@ func InitParser(file_path string) *Parser {
 		current_config: &WorkoutConfig{
 			WorkoutDurationsConfigs: WorkoutDurationsConfigs{
 				TimeDuration: "",
-				TimeREST:     "",
-				TimeWORKOUT:  "",
+				TimeRest:     "",
+				TimeWorkout:  "",
 			},
 			Phases: []*Phase{},
 		},
@@ -81,10 +81,33 @@ func (p *Parser) create_workout_config() {
 			return
 		}
 		p.parse_phases_config()
-		p.parse_single_phase()
-		PrintFl("Parsed Config: %#v ", p.current_config.Phases[0].Workouts[2])
+		for {
+			p.parse_single_phase()
+
+			switch p.t.CheckCurentToken() {
+			case PUNCT_CLOSE_BRACE:
+
+				// PrintFl("Parsed Config: %#v ", p.current_config.Phases)
+				for _, phase := range p.current_config.Phases {
+					PrintFl("phase: %+v", phase.PhaseName)
+					for _, workout := range phase.Workouts {
+
+						PrintFl("workout: %+v", workout)
+
+					}
+
+				}
+
+				return
+			default:
+				// TODO: check for punctuation and similar, only a variable name is ok
+				continue
+			}
+
+		}
 
 	} else {
+
 		TODO("create_workout_config no PHASES at the begining")
 	}
 }
@@ -97,6 +120,7 @@ func (p *Parser) parse_single_phase() {
 
 	// TODO: function to check if the token is some sort of a config, punctuation, etc..
 	phase.PhaseName = phase_name
+	// TODO: expect COLON and config?
 	if err := p.get_and_expect_token(PUNCT_COLON); err != nil {
 		PrintFl("ERROR: %v", err.Error())
 		return
@@ -106,21 +130,24 @@ func (p *Parser) parse_single_phase() {
 	switch config_or_open_brace {
 	case PUNCT_OPEN_BRACE:
 
+		if err := p.get_and_expect_token(PUNCT_OPEN_BRACE); err != nil {
+			PrintFl("ERROR: %v", err.Error())
+			return
+		}
+
 		p.parse_multiple_workouts(&phase)
+		p.current_config.Phases = append(p.current_config.Phases, &phase)
+		p.t.PullToken()
 
 	default:
 		config_durations := p.parse_overwriteable_config()
 		phase.TimeDuration = config_durations.TimeDuration
-		phase.TimeREST = config_durations.TimeREST
-		phase.TimeWORKOUT = config_durations.TimeWORKOUT
+		phase.TimeRest = config_durations.TimeRest
+		phase.TimeWorkout = config_durations.TimeWorkout
 		p.parse_multiple_workouts(&phase)
-		// PrintFl("token before SingleWorkout: %v, phase: %#v ", p.t.CheckCurentToken(), phase)
-		// log.Fatal()
-
 		p.current_config.Phases = append(p.current_config.Phases, &phase)
-
+		p.t.PullToken()
 	}
-
 }
 
 func (p *Parser) parse_multiple_workouts(phase *Phase) {
@@ -145,6 +172,8 @@ func (p *Parser) parse_single_workout() (workout SingleWorkout) {
 
 	workout_name := p.t.PullToken()
 
+	// PrintFl("workout_name: %v ", workout_name)
+	// log.Fatal()
 	workout.WorkoutName = workout_name
 
 	colon_or_comma := p.t.CheckCurentToken()
@@ -164,8 +193,8 @@ func (p *Parser) parse_single_workout() (workout SingleWorkout) {
 
 		config_durations := p.parse_overwriteable_config()
 		workout.TimeDuration = config_durations.TimeDuration
-		workout.TimeREST = config_durations.TimeREST
-		workout.TimeWORKOUT = config_durations.TimeWORKOUT
+		workout.TimeRest = config_durations.TimeRest
+		workout.TimeWorkout = config_durations.TimeWorkout
 
 		p.t.parser_position -= 1
 		return workout
@@ -212,10 +241,10 @@ func (p *Parser) parse_phases_config() {
 
 			continue
 		case CONFIG_REST:
-			p.current_config.TimeREST = config_value
+			p.current_config.TimeRest = config_value
 			continue
 		case CONFIG_WORKOUT:
-			p.current_config.TimeWORKOUT = config_value
+			p.current_config.TimeWorkout = config_value
 			continue
 		default:
 			PrintFl("ERROR: after colon in PHASES mode we cannot get: %v", config_token)
@@ -229,12 +258,12 @@ func (p *Parser) parse_phases_config() {
 		log.Fatal()
 	}
 
-	if p.current_config.TimeREST == "" {
+	if p.current_config.TimeRest == "" {
 		PrintFl("ERROR: -r must be set in PHASES but its empty")
 		log.Fatal()
 	}
 
-	if p.current_config.TimeWORKOUT == "" {
+	if p.current_config.TimeWorkout == "" {
 		PrintFl("ERROR: -w must be set in PHASES but its empty")
 		log.Fatal()
 	}
@@ -272,10 +301,10 @@ func (p *Parser) parse_overwriteable_config() (config_durations WorkoutDurations
 			config_durations.TimeDuration = config_value
 			continue
 		case CONFIG_REST:
-			config_durations.TimeREST = config_value
+			config_durations.TimeRest = config_value
 			continue
 		case CONFIG_WORKOUT:
-			config_durations.TimeWORKOUT = config_value
+			config_durations.TimeWorkout = config_value
 			continue
 		case PUNCT_OPEN_BRACE:
 
