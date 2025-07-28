@@ -1,0 +1,30 @@
+# REST between phases
+basic: -d 10m -r 15s -w 60s -pr 1m {
+ worm-up: -d 10m -r 5s -w 30s { # owerwrides
+    jumps: -d 45s -r 15s, # owerwrides
+    squots, push-ups
+  }
+  workout: {
+    # TODO: add repeats like situps(3)
+    situps, weights
+  }
+  cool-down:{
+    steps
+  }
+}
+
+
+
+# -d  == duration
+# -r  == rest
+# -w  == workout
+# -pr == phase rest (time)
+
+#  m == minutes
+#  s == seconds
+
+# `WORKOUT_SESSION_NAME(variable)`: ...configs {
+#   `PHASE_NAME(variable)`: [...configs] {
+#     ...`SINGLE_WORKOUT_NAME(variable)`: [...configs]
+#   }
+# }

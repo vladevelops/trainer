@@ -44,11 +44,12 @@ func (t *Tokenizer) print_tokens() {
 	fmt.Printf("Parsed tokens: %#v \n", t.tokens)
 }
 
-type KEYWORD string
-
-const (
-	PHASES KEYWORD = "PHASES"
-)
+// type KEYWORD string
+//
+// const (
+// 	PHASES       KEYWORD = "PHASES"
+// 	WORKOUT_NAME KEYWORD = "WORKOUT_NAME"
+// )
 
 func (t *Tokenizer) chars_to_tokens(chars []string) {
 	accomulator := ""
@@ -62,9 +63,9 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 		// t.print_tokens()
 		// fmt.Printf("char: %#v char_index: %v \n", char, char_index)
 		switch accomulator {
-		case string(PHASES):
-			t.tokens = append(t.tokens, string(PHASES))
-			accomulator = ""
+		// case string(PHASES):
+		// 	t.tokens = append(t.tokens, string(PHASES))
+		// 	accomulator = ""
 		case "#":
 			for {
 				char = chars[char_index]
@@ -75,7 +76,7 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 				}
 				char_index += len(char)
 			}
-		case "-d", "-m", "-s":
+		case "-d", "-m", "-s", "-pr":
 			t.tokens = append(t.tokens, accomulator)
 			accomulator = ""
 			// char_index += len(char)

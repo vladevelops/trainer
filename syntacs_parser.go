@@ -3,28 +3,36 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"reflect"
 	"strings"
+
+	"github.com/go-tts/tts/pkg/speech"
 )
 
-type WorkoutDurationsConfigs struct {
-	TimeDuration string
-	TimeRest     string
-	TimeWorkout  string
+type WorkoutConfigs struct {
+	TimeDuration  string
+	TimeRest      string
+	TimeWorkout   string
+	TimePhaseRest string
 }
+
 type SingleWorkout struct {
 	WorkoutName string
-	WorkoutDurationsConfigs
+	WorkoutConfigs
 }
 
 type Phase struct {
 	PhaseName string
 	Workouts  []*SingleWorkout
-	WorkoutDurationsConfigs
+	WorkoutConfigs
 }
 
 type WorkoutConfig struct {
-	Phases []*Phase
-	WorkoutDurationsConfigs
+	Phases            []*Phase
+	SessionName       string
+	DefaultDumpFolder string
+	WorkoutConfigs
 }
 
 type Parser struct {
@@ -40,12 +48,15 @@ func InitParser(file_path string) *Parser {
 	p := Parser{
 		t: &tokenizer,
 		current_config: &WorkoutConfig{
-			WorkoutDurationsConfigs: WorkoutDurationsConfigs{
-				TimeDuration: "",
-				TimeRest:     "",
-				TimeWorkout:  "",
+			WorkoutConfigs: WorkoutConfigs{
+				TimeDuration:  "",
+				TimeRest:      "",
+				TimeWorkout:   "",
+				TimePhaseRest: "",
 			},
-			Phases: []*Phase{},
+			DefaultDumpFolder: "./trainer_files/",
+			SessionName:       "",
+			Phases:            []*Phase{},
 		},
 	}
 
@@ -54,9 +65,10 @@ func InitParser(file_path string) *Parser {
 
 // config tokens
 const (
-	CONFIG_DURATION = "-d"
-	CONFIG_REST     = "-r"
-	CONFIG_WORKOUT  = "-w"
+	CONFIG_DURATION   = "-d"
+	CONFIG_REST       = "-r"
+	CONFIG_PHASE_REST = "-pr"
+	CONFIG_WORKOUT    = "-w"
 )
 
 // config punctuation
@@ -74,44 +86,68 @@ const (
 )
 
 func (p *Parser) create_workout_config() {
-
-	if p.get_and_expect_token(string(PHASES)) == nil {
-		if err := p.get_and_expect_token(PUNCT_COLON); err != nil {
-			PrintFl("ERROR: %v", err.Error())
-			return
-		}
-		p.parse_phases_config()
-		for {
-			p.parse_single_phase()
-
-			switch p.t.CheckCurentToken() {
-			case PUNCT_CLOSE_BRACE:
-
-				// PrintFl("Parsed Config: %#v ", p.current_config.Phases)
-				for _, phase := range p.current_config.Phases {
-					PrintFl("phase: %+v", phase.PhaseName)
-					for _, workout := range phase.Workouts {
-
-						PrintFl("workout: %+v", workout)
-
-					}
-
-				}
-
-				return
-			default:
-				// TODO: check for punctuation and similar, only a variable name is ok
-				continue
-			}
-
-		}
-
-	} else {
-
-		TODO("create_workout_config no PHASES at the begining")
+	workout_name := p.t.PullToken()
+	p.current_config.SessionName = workout_name
+	if err := p.get_and_expect_token(PUNCT_COLON); err != nil {
+		PrintFl("ERROR: %v", err.Error())
+		return
 	}
+	p.parse_phases_config()
+	for {
+		p.parse_single_phase()
+
+		switch p.t.CheckCurentToken() {
+		case PUNCT_CLOSE_BRACE:
+			p.dump_parsed_config()
+
+			return
+		default:
+			// TODO: check for punctuation and similar, only a variable name is ok
+			continue
+		}
+
+	}
+
 }
 
+func (p *Parser) dump_parsed_config() {
+
+	// PrintFl("Parsed Config: %#v ", p.current_config.Phases)
+
+	// TODO: generate all audio files,
+	// create some config to read, can it be go code generated?
+	// create forder for sounds, and generate them
+
+	session_name := p.current_config.SessionName
+	folder_name := p.current_config.DefaultDumpFolder + session_name + "/"
+
+	if _, folder_present_err := os.Stat(folder_name); os.IsNotExist(folder_present_err) {
+		err := os.MkdirAll(folder_name, 0755)
+		if err != nil {
+			fmt.Println("Error creating folder:", err)
+			log.Panic()
+		}
+	}
+
+	p.generate_audio_file("Starting .."+session_name+" session ", folder_name+session_name+".mp3")
+	// for _, phase := range p.current_config.Phases {
+	// 	PrintFl("phase: %+v", phase.PhaseName)
+	// 	for _, workout := range phase.Workouts {
+	// 		PrintFl("workout: %+v", workout)
+	// 	}
+	// }
+}
+
+func (p *Parser) generate_audio_file(text_to_voice, output_path string) {
+
+	output, _ := os.Create(output_path)
+	if err := speech.WriteToAudioStream(strings.NewReader(text_to_voice), output, "en"); err != nil {
+
+		PrintFl("generate audio: %v ", err.Error())
+		log.Fatal()
+	}
+
+}
 func (p *Parser) parse_single_phase() {
 
 	phase := Phase{}
@@ -215,7 +251,9 @@ func (p *Parser) get_and_expect_token(expected_token string) error {
 
 func (p *Parser) parse_phases_config() {
 
-	for range 3 {
+	AMOUNT_OF_MANDATORY_CONFIGS := reflect.ValueOf(WorkoutConfigs{}).NumField()
+
+	for range AMOUNT_OF_MANDATORY_CONFIGS {
 
 		config_token := p.t.CheckCurentToken()
 
@@ -238,10 +276,12 @@ func (p *Parser) parse_phases_config() {
 		switch config_token {
 		case CONFIG_DURATION:
 			p.current_config.TimeDuration = config_value
-
 			continue
 		case CONFIG_REST:
 			p.current_config.TimeRest = config_value
+			continue
+		case CONFIG_PHASE_REST:
+			p.current_config.TimePhaseRest = config_value
 			continue
 		case CONFIG_WORKOUT:
 			p.current_config.TimeWorkout = config_value
@@ -274,7 +314,7 @@ func (p *Parser) parse_phases_config() {
 	}
 }
 
-func (p *Parser) parse_overwriteable_config() (config_durations WorkoutDurationsConfigs) {
+func (p *Parser) parse_overwriteable_config() (config_durations WorkoutConfigs) {
 
 	for {
 
