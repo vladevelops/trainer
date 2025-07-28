@@ -121,7 +121,8 @@ func (p *Parser) dump_parsed_config() {
 	session_name := p.current_config.SessionName
 	folder_name := p.current_config.DefaultDumpFolder + session_name + "/"
 
-	if _, folder_present_err := os.Stat(folder_name); os.IsNotExist(folder_present_err) {
+	_, folder_present_err := os.Stat(folder_name)
+	if os.IsNotExist(folder_present_err) {
 		err := os.MkdirAll(folder_name, 0755)
 		if err != nil {
 			fmt.Println("Error creating folder:", err)
@@ -129,13 +130,29 @@ func (p *Parser) dump_parsed_config() {
 		}
 	}
 
-	p.generate_audio_file("Starting .."+session_name+" session ", folder_name+session_name+".mp3")
-	// for _, phase := range p.current_config.Phases {
-	// 	PrintFl("phase: %+v", phase.PhaseName)
-	// 	for _, workout := range phase.Workouts {
-	// 		PrintFl("workout: %+v", workout)
-	// 	}
-	// }
+	// TODO: clean out unused sounds, get file list and compare it
+
+	session_name_file_path := folder_name + session_name + ".mp3"
+	if _, is_existst_err := os.Stat(session_name_file_path); os.IsNotExist(is_existst_err) {
+		p.generate_audio_file("Starting .."+session_name+" session ", session_name_file_path)
+	}
+
+	for _, phase := range p.current_config.Phases {
+		PrintFl("phase: %+v", phase.PhaseName)
+
+		phase_name_file_path := folder_name + phase.PhaseName + ".mp3"
+		if _, is_existst_err := os.Stat(phase_name_file_path); os.IsNotExist(is_existst_err) {
+			p.generate_audio_file("Starting .."+phase.PhaseName+" phase ", phase_name_file_path)
+		}
+
+		for _, workout := range phase.Workouts {
+			workout_name_file_path := folder_name + workout.WorkoutName + ".mp3"
+			if _, is_existst_err := os.Stat(workout_name_file_path); os.IsNotExist(is_existst_err) {
+				p.generate_audio_file("Starting .."+workout.WorkoutName+" workout ", workout_name_file_path)
+			}
+			PrintFl("workout: %+v", workout)
+		}
+	}
 }
 
 func (p *Parser) generate_audio_file(text_to_voice, output_path string) {
