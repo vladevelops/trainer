@@ -40,7 +40,7 @@ type Parser struct {
 	current_config *WorkoutConfig
 }
 
-func InitParser(file_path string) *Parser {
+func InitParser(file_path, dump_folder_overwrite string) *Parser {
 
 	tokenizer := Tokenizer{}
 	tokenizer.tokenize_entire_file(file_path)
@@ -60,6 +60,10 @@ func InitParser(file_path string) *Parser {
 		},
 	}
 
+	if dump_folder_overwrite != "" {
+		p.current_config.DefaultDumpFolder = dump_folder_overwrite
+
+	}
 	return &p
 }
 
@@ -98,19 +102,17 @@ func (p *Parser) create_workout_config() {
 
 		switch p.t.CheckCurentToken() {
 		case PUNCT_CLOSE_BRACE:
-			p.dump_parsed_config()
+			p.create_audio_files_from_parsed_config()
 
 			return
 		default:
 			// TODO: check for punctuation and similar, only a variable name is ok
 			continue
 		}
-
 	}
-
 }
 
-func (p *Parser) dump_parsed_config() {
+func (p *Parser) create_audio_files_from_parsed_config() {
 
 	// PrintFl("Parsed Config: %#v ", p.current_config.Phases)
 
@@ -138,7 +140,7 @@ func (p *Parser) dump_parsed_config() {
 	}
 
 	for _, phase := range p.current_config.Phases {
-		PrintFl("phase: %+v", phase.PhaseName)
+		// PrintFl("phase: %+v", phase.PhaseName)
 
 		phase_name_file_path := folder_name + phase.PhaseName + ".mp3"
 		if _, is_existst_err := os.Stat(phase_name_file_path); os.IsNotExist(is_existst_err) {
@@ -150,16 +152,16 @@ func (p *Parser) dump_parsed_config() {
 			if _, is_existst_err := os.Stat(workout_name_file_path); os.IsNotExist(is_existst_err) {
 				p.generate_audio_file("Starting .."+workout.WorkoutName+" workout ", workout_name_file_path)
 			}
-			PrintFl("workout: %+v", workout)
+			// PrintFl("workout: %+v", workout)
 		}
 	}
+
 }
 
 func (p *Parser) generate_audio_file(text_to_voice, output_path string) {
 
 	output, _ := os.Create(output_path)
 	if err := speech.WriteToAudioStream(strings.NewReader(text_to_voice), output, "en"); err != nil {
-
 		PrintFl("generate audio: %v ", err.Error())
 		log.Fatal()
 	}
