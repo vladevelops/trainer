@@ -29,8 +29,11 @@ type SoundStream struct {
 }
 
 type Manager struct {
-	DefaultSounds map[SoundAlias]SoundStream
-	UserSounds    map[string]SoundStream
+	DefaultSounds       map[SoundAlias]SoundStream
+	UserSounds          map[string]SoundStream
+	CurrentSessionName  string
+	CurrentPhaseIndex   int
+	CurrentWorkoutIndex int
 }
 
 func sound_to_stream(sound_name, base_folder string) SoundStream {
@@ -81,14 +84,85 @@ func (m *Manager) lunch_training_from_phases(filepath string) {
 		m.UserSounds[map_reference] = sound_to_stream(map_reference, parser.current_config.DefaultDumpFolder)
 	}
 
-	session_folder_name_and_audio_name := parser.current_config.SessionName + "/" + parser.current_config.SessionName
-	m.UserSounds[session_folder_name_and_audio_name] = sound_to_stream(session_folder_name_and_audio_name, parser.current_config.DefaultDumpFolder)
+	m.CurrentSessionName = parser.current_config.SessionName
 
-	for sound_name, sound := range m.UserSounds {
-		PrintFl("playing: %v", sound_name)
-		m.play_sound(sound)
+	current_session := parser.current_config
+
+	phase_traker := make(chan struct{}, 1)
+	workout_traker := make(chan struct{}, 1)
+	rest_traker := make(chan struct{}, 1)
+	end_session := make(chan struct{}, 1)
+
+MAIN_SESSION_LOOP:
+	for {
+
+		select {
+
+		case <-phase_traker:
+
+			phase := current_session.Phases[m.CurrentPhaseIndex]
+			m.play_sound_current_session(phase.PhaseName)
+			PrintFl("phase_traker %v", phase.PhaseName)
+
+			// just to postpone the workout name sound start from the session name
+			// time.Sleep(time.Second * 2)
+
+			workout_traker <- struct{}{}
+			// m.CurrentPhaseIndex++
+
+		case <-workout_traker:
+
+			phase := current_session.Phases[m.CurrentPhaseIndex]
+			PrintFl("m.CurrentPhaseIndex: %v", m.CurrentPhaseIndex)
+
+			workout := phase.Workouts[m.CurrentWorkoutIndex]
+
+			m.play_sound_current_session(workout.WorkoutName)
+
+			if m.CurrentWorkoutIndex < len(phase.Workouts)-1 {
+				m.CurrentWorkoutIndex++
+				workout_traker <- struct{}{}
+
+			} else {
+				if m.CurrentPhaseIndex < len(current_session.Phases)-1 {
+					m.CurrentPhaseIndex++
+					m.CurrentWorkoutIndex = 0
+					phase_traker <- struct{}{}
+				} else {
+					end_session <- struct{}{}
+				}
+
+			}
+
+			// if workout.TimeWorkout == "" && workout.TimeDuration == "" {
+			// 	if phase.TimeWorkout == "" {
+			// 		_ = current_session.TimeWorkout
+			// 	}
+			// } else {
+			// 	workout_timer_any_accepted_time(workout.TimeDuration)
+			//
+			// }
+
+		case <-rest_traker:
+
+		case <-end_session:
+
+			WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
+			m.play_sound(WORKOUT_ENDED_SOUND)
+			break MAIN_SESSION_LOOP
+
+		default:
+			m.play_sound(m.DefaultSounds[READY_GO])
+			PrintFl("default")
+			phase_traker <- struct{}{}
+
+		}
 	}
+}
 
+func (m *Manager) play_sound_current_session(file_name string) {
+
+	m.play_sound(m.UserSounds[m.CurrentSessionName+"/"+file_name])
 }
 
 func (m *Manager) init_sounds() {
@@ -128,6 +202,15 @@ func workout_timer(time_in_seconds string, duration_to_parce TimeDuration) {
 		log.Fatal("")
 	}
 	time.Sleep(workout_time_in_seconds)
+}
+func workout_timer_any_accepted_time(time_to_convert string) {
+	workout_timer, duration_parse_err := time.ParseDuration(time_to_convert)
+	if duration_parse_err != nil {
+		fmt.Printf("[Error] Cannot parse workout time %v", duration_parse_err)
+		log.Fatal("")
+	}
+	PrintFl("parsed workout_timer: %v", workout_timer)
+	time.Sleep(workout_timer)
 }
 
 func main() {
