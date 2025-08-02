@@ -63,9 +63,6 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 		// t.print_tokens()
 		// fmt.Printf("char: %#v char_index: %v \n", char, char_index)
 		switch accomulator {
-		// case string(PHASES):
-		// 	t.tokens = append(t.tokens, string(PHASES))
-		// 	accomulator = ""
 		case "#":
 			for {
 				char = chars[char_index]
@@ -76,7 +73,7 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 				}
 				char_index += len(char)
 			}
-		case "-d", "-m", "-s", "-pr":
+		case "-m", "-s", "-pr":
 			t.tokens = append(t.tokens, accomulator)
 			accomulator = ""
 			// char_index += len(char)

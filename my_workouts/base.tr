@@ -1,7 +1,7 @@
 # REST between phases
-basic: -d 10m -r 15s -w 60s -pr 1m {
- worm-up: -d 10m -r 5s -w 30s { # owerwrides
-    jumps: -d 45s -r 15s, # owerwrides
+basic: -w 10s -r 5s -pr 10s {
+ worm-up: -r 5s -w 30s { # owerwrides
+    jumps: -w 15s -r 5s, # owerwrides
     squots, push-ups
   }
   workout: {
@@ -15,10 +15,10 @@ basic: -d 10m -r 15s -w 60s -pr 1m {
 
 
 
-# -d  == duration
+# configs:
 # -r  == rest
 # -w  == workout
-# -pr == phase rest (time)
+# -pr == phase rest (time) -> only for WORKOUT_SESSION_NAME
 
 #  m == minutes
 #  s == seconds

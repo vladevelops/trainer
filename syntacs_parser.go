@@ -11,9 +11,9 @@ import (
 )
 
 type WorkoutConfigs struct {
-	TimeDuration  string
-	TimeRest      string
-	TimeWorkout   string
+	TimeRest    string
+	TimeWorkout string
+	// NOTE: not a fun of this config being here
 	TimePhaseRest string
 }
 
@@ -49,7 +49,6 @@ func InitParser(file_path, dump_folder_overwrite string) *Parser {
 		t: &tokenizer,
 		current_config: &WorkoutConfig{
 			WorkoutConfigs: WorkoutConfigs{
-				TimeDuration:  "",
 				TimeRest:      "",
 				TimeWorkout:   "",
 				TimePhaseRest: "",
@@ -69,7 +68,6 @@ func InitParser(file_path, dump_folder_overwrite string) *Parser {
 
 // config tokens
 const (
-	CONFIG_DURATION   = "-d"
 	CONFIG_REST       = "-r"
 	CONFIG_PHASE_REST = "-pr"
 	CONFIG_WORKOUT    = "-w"
@@ -196,7 +194,6 @@ func (p *Parser) parse_single_phase() {
 
 	default:
 		config_durations := p.parse_overwriteable_config()
-		phase.TimeDuration = config_durations.TimeDuration
 		phase.TimeRest = config_durations.TimeRest
 		phase.TimeWorkout = config_durations.TimeWorkout
 		p.parse_multiple_workouts(&phase)
@@ -247,7 +244,6 @@ func (p *Parser) parse_single_workout() (workout SingleWorkout) {
 		}
 
 		config_durations := p.parse_overwriteable_config()
-		workout.TimeDuration = config_durations.TimeDuration
 		workout.TimeRest = config_durations.TimeRest
 		workout.TimeWorkout = config_durations.TimeWorkout
 
@@ -293,9 +289,6 @@ func (p *Parser) parse_phases_config() {
 		}
 
 		switch config_token {
-		case CONFIG_DURATION:
-			p.current_config.TimeDuration = config_value
-			continue
 		case CONFIG_REST:
 			p.current_config.TimeRest = config_value
 			continue
@@ -312,10 +305,6 @@ func (p *Parser) parse_phases_config() {
 	}
 
 	// TODO: this is ugly, use reflect to create checking in a loop
-	if p.current_config.TimeDuration == "" {
-		PrintFl("ERROR: -d must be set in PHASES but its empty")
-		log.Fatal()
-	}
 
 	if p.current_config.TimeRest == "" {
 		PrintFl("ERROR: -r must be set in PHASES but its empty")
@@ -356,9 +345,6 @@ func (p *Parser) parse_overwriteable_config() (config_durations WorkoutConfigs) 
 		}
 
 		switch config_token {
-		case CONFIG_DURATION:
-			config_durations.TimeDuration = config_value
-			continue
 		case CONFIG_REST:
 			config_durations.TimeRest = config_value
 			continue
