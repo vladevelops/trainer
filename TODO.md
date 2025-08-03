@@ -1,9 +1,4 @@
-# Objective 
-
-Add custom workouts with specific timings for, parts of session and/or specific workout
-Parse a file in some format, (custom | json | yaml)
-Save this routine in a file, or Sqlite 
-Add the posibility to name the sets and call them by voice
-
-
-- [ ] Add custom names to workouts
+- [ ] `BUG` the dot sound before some exercises, found in abs-legs-up-down
+- [ ] Add next exercise announcement 
+- [ ] Add some count down before starting the exercise 
+- [ ] Add support for multiple languages, the idea is to be able to change language for each workout

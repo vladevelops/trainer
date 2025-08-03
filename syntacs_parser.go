@@ -113,11 +113,6 @@ func (p *Parser) create_workout_config() {
 func (p *Parser) create_audio_files_from_parsed_config() {
 
 	// PrintFl("Parsed Config: %#v ", p.current_config.Phases)
-
-	// TODO: generate all audio files,
-	// create some config to read, can it be go code generated?
-	// create forder for sounds, and generate them
-
 	session_name := p.current_config.SessionName
 	folder_name := p.current_config.DefaultDumpFolder + session_name + "/"
 
@@ -131,28 +126,28 @@ func (p *Parser) create_audio_files_from_parsed_config() {
 	}
 
 	// TODO: clean out unused sounds, get file list and compare it
+	// show the generation string only when it really needed
 
+	PrintFl("Generating all the audio files, please wait....")
 	session_name_file_path := folder_name + session_name + ".mp3"
 	if _, is_existst_err := os.Stat(session_name_file_path); os.IsNotExist(is_existst_err) {
-		p.generate_audio_file("Starting .."+session_name+" session ", session_name_file_path)
+		p.generate_audio_file("Starting.. "+session_name+" session ", session_name_file_path)
 	}
 
 	for _, phase := range p.current_config.Phases {
-		// PrintFl("phase: %+v", phase.PhaseName)
-
 		phase_name_file_path := folder_name + phase.PhaseName + ".mp3"
 		if _, is_existst_err := os.Stat(phase_name_file_path); os.IsNotExist(is_existst_err) {
-			p.generate_audio_file("Starting .."+phase.PhaseName+" phase ", phase_name_file_path)
+			p.generate_audio_file("Starting.. "+phase.PhaseName+" phase ", phase_name_file_path)
 		}
 
 		for _, workout := range phase.Workouts {
 			workout_name_file_path := folder_name + workout.WorkoutName + ".mp3"
 			if _, is_existst_err := os.Stat(workout_name_file_path); os.IsNotExist(is_existst_err) {
-				p.generate_audio_file("Starting .."+workout.WorkoutName+" workout ", workout_name_file_path)
+				p.generate_audio_file(workout.WorkoutName+" workout. ", workout_name_file_path)
 			}
-			// PrintFl("workout: %+v", workout)
 		}
 	}
+	PrintFl("Generating audio files done")
 
 }
 

@@ -22,9 +22,12 @@ type SoundAlias int
 
 const (
 	READY_GO      SoundAlias = iota
+	STARTING      SoundAlias = iota
 	WORKOUT       SoundAlias = iota
+	PREPARE_FOR   SoundAlias = iota
 	REST          SoundAlias = iota
 	WORKOUT_ENDED SoundAlias = iota
+	PHASE_ENDED   SoundAlias = iota
 )
 
 type SoundStream struct {
@@ -49,7 +52,7 @@ func InitManager() *Manager {
 		UserSounds:    map[string]SoundStream{},
 	}
 
-	m.init_sounds()
+	m.init_default_sounds()
 	return m
 
 }
@@ -75,8 +78,6 @@ func main() {
 
 	flag.Parse()
 
-	PrintFl("args: %v", flag.Args())
-
 	m := InitManager()
 
 	if len(flag.Args()) > 0 {
@@ -85,6 +86,152 @@ func main() {
 		m.lunch_training_from_cmd(workout_session_in_minutes, workout_time_in_seconds, rest_time_in_seconds)
 	}
 
+}
+
+func (m *Manager) lunch_training_from_phases(filepath string) {
+
+	parser := InitParser(filepath, "")
+	parser.create_workout_config()
+
+	directory_to_read := parser.current_config.DefaultDumpFolder + parser.current_config.SessionName
+	present_audio_files, read_directory_err := os.ReadDir(directory_to_read)
+
+	if read_directory_err != nil {
+		PrintFl("[ERROR] read custom audio directory: %v ", read_directory_err.Error())
+		log.Fatal()
+
+	}
+
+	for _, file := range present_audio_files {
+		file_name := strings.TrimSuffix(file.Name(), ".mp3")
+		map_reference := parser.current_config.SessionName + "/" + file_name
+		m.UserSounds[map_reference] = sound_to_stream(map_reference, parser.current_config.DefaultDumpFolder)
+	}
+
+	m.CurrentSessionName = parser.current_config.SessionName
+
+	current_session := parser.current_config
+
+	phase_traker := make(chan struct{}, 1)
+	between_phase_traker := make(chan struct{}, 1)
+	workout_traker := make(chan struct{}, 1)
+	rest_traker := make(chan struct{}, 1)
+	end_traker := make(chan struct{}, 1)
+
+	for _, phase := range current_session.Phases {
+		for _, workout := range phase.Workouts {
+			// when time is set we do not edit it
+			if workout.TimeWorkout == "" {
+				if phase.TimeWorkout != "" {
+					workout.TimeWorkout = phase.TimeWorkout
+				} else {
+					workout.TimeWorkout = current_session.TimeWorkout
+				}
+			}
+
+			if workout.TimeRest == "" {
+				if phase.TimeRest != "" {
+					workout.TimeRest = phase.TimeRest
+				} else {
+					workout.TimeRest = current_session.TimeRest
+				}
+			}
+
+		}
+	}
+
+MAIN_SESSION_LOOP:
+	for {
+
+		select {
+
+		case <-phase_traker:
+
+			phase := current_session.Phases[m.CurrentPhaseIndex]
+			m.play_sound_current_session(phase.PhaseName)
+			PrintFl("phase_traker %v", phase.PhaseName)
+
+			//just to postpone the workout name sound start from the session name
+			time.Sleep(time.Second * 2)
+
+			workout_traker <- struct{}{}
+
+		case <-workout_traker:
+
+			phase := current_session.Phases[m.CurrentPhaseIndex]
+			workout := phase.Workouts[m.CurrentWorkoutIndex]
+
+			m.play_sound(m.DefaultSounds[STARTING])
+			m.play_sound_current_session(workout.WorkoutName)
+			m.play_sound(m.DefaultSounds[READY_GO])
+			workout_timer_any_accepted_time(workout.TimeWorkout)
+
+			if m.CurrentWorkoutIndex < len(phase.Workouts)-1 {
+				if workout.TimeRest != "" {
+					rest_traker <- struct{}{}
+				} else {
+
+					m.play_sound(m.DefaultSounds[PREPARE_FOR])
+					next_workout := phase.Workouts[m.CurrentWorkoutIndex+1]
+					m.play_sound_current_session(next_workout.WorkoutName)
+
+					m.CurrentWorkoutIndex++
+					workout_traker <- struct{}{}
+				}
+
+			} else {
+
+				if m.CurrentPhaseIndex < len(current_session.Phases)-1 {
+					if current_session.TimePhaseRest != "" {
+						between_phase_traker <- struct{}{}
+
+					} else {
+						m.CurrentPhaseIndex++
+						m.CurrentWorkoutIndex = 0
+						phase_traker <- struct{}{}
+					}
+				} else {
+					end_traker <- struct{}{}
+				}
+			}
+
+		case <-rest_traker:
+
+			phase := current_session.Phases[m.CurrentPhaseIndex]
+			workout := phase.Workouts[m.CurrentWorkoutIndex]
+
+			m.play_sound(m.DefaultSounds[REST])
+
+			time.Sleep(time.Second * 1)
+			m.play_sound(m.DefaultSounds[PREPARE_FOR])
+			next_workout := phase.Workouts[m.CurrentWorkoutIndex+1]
+			m.play_sound_current_session(next_workout.WorkoutName)
+
+			workout_timer_any_accepted_time(workout.TimeRest)
+			m.CurrentWorkoutIndex++
+			workout_traker <- struct{}{}
+
+		case <-between_phase_traker:
+			PHASE_ENDED_SOUND := m.DefaultSounds[PHASE_ENDED]
+			m.play_sound(PHASE_ENDED_SOUND)
+			workout_timer_any_accepted_time(current_session.TimePhaseRest)
+
+			m.CurrentPhaseIndex++
+			m.CurrentWorkoutIndex = 0
+			phase_traker <- struct{}{}
+
+		case <-end_traker:
+
+			WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
+			m.play_sound(WORKOUT_ENDED_SOUND)
+			break MAIN_SESSION_LOOP
+
+		default:
+			m.play_sound(m.DefaultSounds[READY_GO])
+			phase_traker <- struct{}{}
+
+		}
+	}
 }
 
 func (m *Manager) lunch_training_from_cmd(workout_session_in_minutes, workout_time_in_seconds, rest_time_in_seconds *string) {
@@ -152,128 +299,6 @@ MAIN_LOOP:
 	WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
 	m.play_sound(WORKOUT_ENDED_SOUND)
 }
-
-func (m *Manager) lunch_training_from_phases(filepath string) {
-
-	parser := InitParser(filepath, "")
-	parser.create_workout_config()
-
-	directory_to_read := parser.current_config.DefaultDumpFolder + parser.current_config.SessionName
-	present_audio_files, read_directory_err := os.ReadDir(directory_to_read)
-
-	if read_directory_err != nil {
-		PrintFl("[ERROR] read custom audio directory: %v ", read_directory_err.Error())
-		log.Fatal()
-
-	}
-
-	for _, file := range present_audio_files {
-		file_name := strings.TrimSuffix(file.Name(), ".mp3")
-		map_reference := parser.current_config.SessionName + "/" + file_name
-		m.UserSounds[map_reference] = sound_to_stream(map_reference, parser.current_config.DefaultDumpFolder)
-	}
-
-	m.CurrentSessionName = parser.current_config.SessionName
-
-	current_session := parser.current_config
-
-	phase_traker := make(chan struct{}, 1)
-	workout_traker := make(chan struct{}, 1)
-	rest_traker := make(chan struct{}, 1)
-	end_traker := make(chan struct{}, 1)
-
-	// TODO: propagate all configs to workouts so we can just use a correct config for each workout
-	// loop the config "tree" and set
-	for _, phase := range current_session.Phases {
-		for _, workout := range phase.Workouts {
-			// when time is set we do not edit it
-			if workout.TimeWorkout == "" {
-				if phase.TimeWorkout != "" {
-					workout.TimeWorkout = phase.TimeWorkout
-				} else {
-					workout.TimeWorkout = current_session.TimeWorkout
-				}
-			}
-
-			if workout.TimeRest == "" {
-				if phase.TimeRest != "" {
-					workout.TimeRest = phase.TimeRest
-				} else {
-					workout.TimeRest = current_session.TimeRest
-				}
-			}
-
-		}
-	}
-
-MAIN_SESSION_LOOP:
-	for {
-
-		select {
-
-		case <-phase_traker:
-
-			phase := current_session.Phases[m.CurrentPhaseIndex]
-			m.play_sound_current_session(phase.PhaseName)
-			PrintFl("phase_traker %v", phase.PhaseName)
-
-			//just to postpone the workout name sound start from the session name
-			time.Sleep(time.Second * 2)
-
-			workout_traker <- struct{}{}
-
-		case <-workout_traker:
-
-			phase := current_session.Phases[m.CurrentPhaseIndex]
-			workout := phase.Workouts[m.CurrentWorkoutIndex]
-
-			m.play_sound_current_session(workout.WorkoutName)
-			workout_timer_any_accepted_time(workout.TimeWorkout)
-
-			//TODO: this can be factor to a func
-			if m.CurrentWorkoutIndex < len(phase.Workouts)-1 {
-
-				if workout.TimeRest != "" {
-					rest_traker <- struct{}{}
-				} else {
-					m.CurrentWorkoutIndex++
-					workout_traker <- struct{}{}
-				}
-
-			} else {
-				if m.CurrentPhaseIndex < len(current_session.Phases)-1 {
-					m.CurrentPhaseIndex++
-					m.CurrentWorkoutIndex = 0
-					phase_traker <- struct{}{}
-				} else {
-					end_traker <- struct{}{}
-				}
-			}
-
-		case <-rest_traker:
-
-			phase := current_session.Phases[m.CurrentPhaseIndex]
-			workout := phase.Workouts[m.CurrentWorkoutIndex]
-
-			m.play_sound(m.DefaultSounds[REST])
-			workout_timer_any_accepted_time(workout.TimeRest)
-			m.CurrentWorkoutIndex++
-			workout_traker <- struct{}{}
-
-		case <-end_traker:
-
-			WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
-			m.play_sound(WORKOUT_ENDED_SOUND)
-			break MAIN_SESSION_LOOP
-
-		default:
-			m.play_sound(m.DefaultSounds[READY_GO])
-			phase_traker <- struct{}{}
-
-		}
-	}
-}
-
 func sound_to_stream(sound_name, base_folder string) SoundStream {
 	workout_file, err := os.Open(base_folder + sound_name + ".mp3")
 	if err != nil {
@@ -315,7 +340,7 @@ func (m *Manager) play_sound_current_session(file_name string) {
 	m.play_sound(m.UserSounds[m.CurrentSessionName+"/"+file_name])
 }
 
-func (m *Manager) init_sounds() {
+func (m *Manager) init_default_sounds() {
 	// TODO: this should work for final build
 	// m.DefaultSounds[REST] = sound_from_embeded("rest")
 	// m.DefaultSounds[WORKOUT] = sound_from_embeded("workout")
@@ -326,10 +351,13 @@ func (m *Manager) init_sounds() {
 
 	// old way
 	default_sounds_folder := "./audio_files/"
-	m.DefaultSounds[REST] = sound_to_stream("rest", default_sounds_folder)
-	m.DefaultSounds[WORKOUT] = sound_to_stream("workout", default_sounds_folder)
 	m.DefaultSounds[READY_GO] = sound_to_stream("ready_go", default_sounds_folder)
+	m.DefaultSounds[STARTING] = sound_to_stream("starting", default_sounds_folder)
+	m.DefaultSounds[WORKOUT] = sound_to_stream("workout", default_sounds_folder)
+	m.DefaultSounds[PREPARE_FOR] = sound_to_stream("prepare_for", default_sounds_folder)
+	m.DefaultSounds[REST] = sound_to_stream("rest", default_sounds_folder)
 	m.DefaultSounds[WORKOUT_ENDED] = sound_to_stream("end_workout", default_sounds_folder)
+	m.DefaultSounds[PHASE_ENDED] = sound_to_stream("phase_ended_rest", default_sounds_folder)
 }
 
 func (m *Manager) play_sound(sound SoundStream) {

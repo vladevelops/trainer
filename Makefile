@@ -1,6 +1,6 @@
-run: 
-	@go run main.go	-d 1 -w 10
+build: 
+	@go build -o trainer .
 
-: 
+file: 
 	@go run . ./my_workouts/morning_exercise.tr
 
