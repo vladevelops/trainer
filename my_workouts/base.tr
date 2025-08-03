@@ -1,16 +1,20 @@
 # REST between phases
-basic: -w 10s -r 5s -pr 10s {
- worm-up: -r 5s -w 30s { # owerwrides
-    jumps: -w 15s -r 5s, # owerwrides
-    squots, push-ups
-  }
-  workout: {
-    # TODO: add repeats like situps(3)
-    situps, weights
-  }
-  cool-down:{
-    steps
-  }
+morning_exercise: -w 45s -r 15s -pr 1m {
+  worm-up: -w 1m -r 15s { # owerwrides
+    squats-elbow,
+    elbow-to-knees, # owerwrides 
+    jumping-open-arms, # owerwrides
+    running-on-spot,
+    jumping-open-arms,
+    ground-hand-knee
+   }
+   workout: {
+     #TODO: add repeats like situps(3)
+     sit-up, weights
+   }
+   cool-down:{
+     steps
+   }
 }
 
 
@@ -28,3 +32,6 @@ basic: -w 10s -r 5s -pr 10s {
 #     ...`SINGLE_WORKOUT_NAME(variable)`: [...configs]
 #   }
 # }
+
+# NOTE: the go-tts pronounces `_` in word but `-` is treated like small pause in speech
+# if you want to add more pause between words you can use `...` method, more dots more the pause is long

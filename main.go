@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"log"
@@ -13,6 +14,9 @@ import (
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 )
+
+//go:embed audio_files/*.mp3
+var default_audio_sounds embed.FS
 
 type SoundAlias int
 
@@ -36,6 +40,25 @@ type Manager struct {
 	// This approach is chosen so we could easily restart the session from a specific phase and workout in future updates
 	CurrentPhaseIndex   int
 	CurrentWorkoutIndex int
+}
+
+func sound_from_embeded(sound_name string) SoundStream {
+
+	workout_file, err := default_audio_sounds.Open("sounds/" + sound_name + ".mp3")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	streamer, format, err := mp3.Decode(workout_file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return SoundStream{
+		Stream: streamer,
+		Format: format,
+	}
 }
 
 func sound_to_stream(sound_name, base_folder string) SoundStream {
@@ -193,10 +216,15 @@ func (m *Manager) play_sound_current_session(file_name string) {
 }
 
 func (m *Manager) init_sounds() {
-	// NOTE: we can create more flexible way to get the file names form dir
+	// TODO: this should work for final build
+	// m.DefaultSounds[REST] = sound_from_embeded("rest")
+	// m.DefaultSounds[WORKOUT] = sound_from_embeded("workout")
+	// m.DefaultSounds[READY_GO] = sound_from_embeded("ready_go")
+	// m.DefaultSounds[WORKOUT_ENDED] = sound_from_embeded("end_workout")
 
 	// TODO: imbed this default sounds in to the binary
 
+	// old way
 	default_sounds_folder := "./audio_files/"
 	m.DefaultSounds[REST] = sound_to_stream("rest", default_sounds_folder)
 	m.DefaultSounds[WORKOUT] = sound_to_stream("workout", default_sounds_folder)
@@ -236,7 +264,7 @@ func workout_timer_any_accepted_time(time_to_convert string) {
 		fmt.Printf("[Error] Cannot parse workout time %v", duration_parse_err)
 		log.Fatal("")
 	}
-	PrintFl("parsed workout_timer: %v", workout_timer)
+	PrintFl("Duration: %v", workout_timer)
 	time.Sleep(workout_timer)
 }
 

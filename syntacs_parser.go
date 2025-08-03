@@ -213,6 +213,12 @@ SINGLE_WORKOUT_AFTER_CONFIG:
 		switch comma_or_close_brase {
 		case PUNCT_COMMA:
 			p.t.PullToken()
+
+			comma_or_close_brase := p.t.CheckCurentToken()
+
+			if comma_or_close_brase == PUNCT_CLOSE_BRACE {
+				break SINGLE_WORKOUT_AFTER_CONFIG
+			}
 			continue
 		case PUNCT_CLOSE_BRACE:
 			break SINGLE_WORKOUT_AFTER_CONFIG
@@ -327,21 +333,24 @@ func (p *Parser) parse_overwriteable_config() (config_durations WorkoutConfigs) 
 	for {
 
 		config_token := p.t.CheckCurentToken()
+		PrintFl("config_token: %v", config_token)
 
 		// here we are getting the config token,
 		// but we have no idea witch so we cannot use `get_and_expect_token`
 		p.t.PullToken()
 
 		config_value := p.t.PullToken()
+		PrintFl("config_value: %v", config_value)
 
 		if strings.HasPrefix(config_value, "-") {
 			PrintFl("ERROR: config value cannot have `-` prefix, got: %v", config_value)
 			log.Fatal()
 		}
 
-		if !p.check_config_value_is_valid(config_value) {
+		if config_token != PUNCT_OPEN_BRACE && !p.check_config_value_is_valid(config_value) {
 			PrintFl("ERROR: config value can be only in s[econds] | m[inutes] got: %v", config_value)
-			log.Fatal()
+			panic("hello")
+			// log.Fatal()
 		}
 
 		switch config_token {
@@ -369,6 +378,7 @@ func (p *Parser) parse_overwriteable_config() (config_durations WorkoutConfigs) 
 func (p *Parser) check_config_value_is_valid(config_value string) bool {
 
 	last_string_in_config_value := string(config_value[len(config_value)-1])
+
 	if last_string_in_config_value == CONFIG_SECONDS ||
 		last_string_in_config_value == CONFIG_MINUTES {
 
