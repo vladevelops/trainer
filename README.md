@@ -25,12 +25,11 @@ It's designed to be simple, and allow you to integrate exercise routines into yo
 ### Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/trainer-app.git
-cd trainer-app
-go build .
+git clone https://github.com/vladevelops/trainer.git
+cd trainer
+go build -o trainer .
+
 ```
-
-
 
 ### Simple language for creating exercises
 
