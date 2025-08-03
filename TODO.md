@@ -1,4 +1,6 @@
-- [ ] `BUG` the dot sound before some exercises, found in abs-legs-up-down
-- [ ] Add next exercise announcement 
-- [ ] Add some count down before starting the exercise 
+- [X] Add next exercise announcement 
+- [X] Add some count down before starting the exercise 
+- [ ] Add the possibility to add workout repetition like sit-ups(3) so this will be repeated 3 times in row
+- [ ] Add nvim,emacs syntax highlighting for the language
+- [ ] Generate a default exercise file from cmd, 
 - [ ] Add support for multiple languages, the idea is to be able to change language for each workout
