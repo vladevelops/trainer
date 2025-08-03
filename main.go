@@ -42,41 +42,6 @@ type Manager struct {
 	CurrentWorkoutIndex int
 }
 
-func sound_from_embeded(sound_name string) SoundStream {
-
-	workout_file, err := default_audio_sounds.Open("sounds/" + sound_name + ".mp3")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	streamer, format, err := mp3.Decode(workout_file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return SoundStream{
-		Stream: streamer,
-		Format: format,
-	}
-}
-
-func sound_to_stream(sound_name, base_folder string) SoundStream {
-	workout_file, err := os.Open(base_folder + sound_name + ".mp3")
-	if err != nil {
-		log.Fatal(err)
-	}
-	streamer, format, err := mp3.Decode(workout_file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return SoundStream{
-		Stream: streamer,
-		Format: format,
-	}
-}
-
 func InitManager() *Manager {
 
 	m := &Manager{
@@ -87,6 +52,105 @@ func InitManager() *Manager {
 	m.init_sounds()
 	return m
 
+}
+
+func main() {
+
+	workout_session_in_minutes := flag.String("d", "", "How many minutes you like this session last, d=duration")
+	workout_time_in_seconds := flag.String("w", "45", "Provide workout time, in seconds, w=workout")
+	rest_time_in_seconds := flag.String("r", "0", "Provide rest time between sets, in seconds, if not provided no rest, r=rest")
+
+	flag.Usage = func() {
+
+		fmt.Fprintln(os.Stderr, "trainr have two modes, from file")
+		fmt.Fprintln(os.Stderr, "trainer ./[woroutfile]")
+
+		fmt.Fprintln(os.Stderr, "or cmd args, when you want just a quick exercise you can use: ")
+		flag.PrintDefaults()
+		fmt.Fprintln(os.Stderr, "Default: d=infinite r=0, w=45 ")
+		fmt.Fprintln(os.Stderr, "\nExample:")
+		fmt.Fprintln(os.Stdin, "-d 10 -r 15 w 20")
+
+	}
+
+	flag.Parse()
+
+	PrintFl("args: %v", flag.Args())
+
+	m := InitManager()
+
+	if len(flag.Args()) > 0 {
+		m.lunch_training_from_phases(flag.Arg(0))
+	} else {
+		m.lunch_training_from_cmd(workout_session_in_minutes, workout_time_in_seconds, rest_time_in_seconds)
+	}
+
+}
+
+func (m *Manager) lunch_training_from_cmd(workout_session_in_minutes, workout_time_in_seconds, rest_time_in_seconds *string) {
+
+	fmt.Printf("rest_time_in_seconds: %v \n", *rest_time_in_seconds)
+	fmt.Printf("workout_time_in_seconds: %v \n", *workout_time_in_seconds)
+	is_workout_phase := true
+	is_init := true
+
+	m.play_sound(m.DefaultSounds[READY_GO])
+
+	end_workout := make(chan struct{})
+
+	if workout_session_in_minutes != nil && *workout_session_in_minutes != "" {
+
+		go func() {
+
+			workout_timer(*workout_session_in_minutes, MINUTES)
+			end_workout <- struct{}{}
+
+		}()
+	}
+
+	is_workout_ended := false
+MAIN_LOOP:
+	for {
+
+		select {
+		case <-end_workout:
+			is_workout_ended = true
+		default:
+
+			if is_workout_ended {
+				break MAIN_LOOP
+			}
+
+			if is_workout_phase {
+				// TODO: this is ugly as hell, make it better
+				if !is_init {
+					WORKOUT_SOUND := m.DefaultSounds[WORKOUT]
+					m.play_sound(WORKOUT_SOUND)
+				}
+
+				fmt.Printf("WORKOUT phase t: %v \n", time.Now().Format(time.TimeOnly))
+
+				if is_init {
+					is_init = false
+				}
+
+				workout_timer(*workout_time_in_seconds, SECONDS)
+				is_workout_phase = false
+			} else {
+				if *rest_time_in_seconds != "0" {
+
+					REST_SOUND := m.DefaultSounds[REST]
+					m.play_sound(REST_SOUND)
+					fmt.Printf("REST phase t: %v \n", time.Now().Format(time.TimeOnly))
+					workout_timer(*rest_time_in_seconds, SECONDS)
+				}
+				is_workout_phase = true
+			}
+		}
+	}
+
+	WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
+	m.play_sound(WORKOUT_ENDED_SOUND)
 }
 
 func (m *Manager) lunch_training_from_phases(filepath string) {
@@ -210,6 +274,42 @@ MAIN_SESSION_LOOP:
 	}
 }
 
+func sound_to_stream(sound_name, base_folder string) SoundStream {
+	workout_file, err := os.Open(base_folder + sound_name + ".mp3")
+	if err != nil {
+		log.Fatal(err)
+	}
+	streamer, format, err := mp3.Decode(workout_file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return SoundStream{
+		Stream: streamer,
+		Format: format,
+	}
+}
+
+// TODO:  Will be enabled later
+// func sound_from_embeded(sound_name string) SoundStream {
+//
+//		workout_file, err := default_audio_sounds.Open("sounds/" + sound_name + ".mp3")
+//
+//		if err != nil {
+//			log.Fatal(err)
+//		}
+//
+//		streamer, format, err := mp3.Decode(workout_file)
+//		if err != nil {
+//			log.Fatal(err)
+//		}
+//
+//		return SoundStream{
+//			Stream: streamer,
+//			Format: format,
+//		}
+//	}
+
 func (m *Manager) play_sound_current_session(file_name string) {
 
 	m.play_sound(m.UserSounds[m.CurrentSessionName+"/"+file_name])
@@ -266,90 +366,6 @@ func workout_timer_any_accepted_time(time_to_convert string) {
 	}
 	PrintFl("Duration: %v", workout_timer)
 	time.Sleep(workout_timer)
-}
-
-func main() {
-
-	rest_time_in_seconds := flag.String("r", "0", "Provide rest time between sets, in seconds, if not provided no rest, r=rest")
-	workout_time_in_seconds := flag.String("w", "45", "Provide workout time, in seconds, w=workout")
-	workout_session_in_minutes := flag.String("d", "", "How many minutes you like this session last, d=duration")
-
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Default: d=infinite r=0, w=45 ")
-		flag.PrintDefaults()
-
-		fmt.Fprintln(os.Stderr, "\nExample:")
-		fmt.Fprintln(os.Stdin, "-d 10 -r 15 w 20")
-
-	}
-
-	flag.Parse()
-
-	fmt.Printf("rest_time_in_seconds: %v \n", *rest_time_in_seconds)
-	fmt.Printf("workout_time_in_seconds: %v \n", *workout_time_in_seconds)
-
-	m := InitManager()
-
-	is_workout_phase := true
-	is_init := true
-
-	m.play_sound(m.DefaultSounds[READY_GO])
-
-	end_workout := make(chan struct{})
-
-	if workout_session_in_minutes != nil && *workout_session_in_minutes != "" {
-
-		go func() {
-
-			workout_timer(*workout_session_in_minutes, MINUTES)
-			end_workout <- struct{}{}
-
-		}()
-	}
-
-	is_workout_ended := false
-MAIN_LOOP:
-	for {
-
-		select {
-		case <-end_workout:
-			is_workout_ended = true
-		default:
-
-			if is_workout_ended {
-				break MAIN_LOOP
-			}
-
-			if is_workout_phase {
-				// TODO: this is ugly as hell, make it better
-				if !is_init {
-					WORKOUT_SOUND := m.DefaultSounds[WORKOUT]
-					m.play_sound(WORKOUT_SOUND)
-				}
-
-				fmt.Printf("WORKOUT phase t: %v \n", time.Now().Format(time.TimeOnly))
-
-				if is_init {
-					is_init = false
-				}
-
-				workout_timer(*workout_time_in_seconds, SECONDS)
-				is_workout_phase = false
-			} else {
-				if *rest_time_in_seconds != "0" {
-
-					REST_SOUND := m.DefaultSounds[REST]
-					m.play_sound(REST_SOUND)
-					fmt.Printf("REST phase t: %v \n", time.Now().Format(time.TimeOnly))
-					workout_timer(*rest_time_in_seconds, SECONDS)
-				}
-				is_workout_phase = true
-			}
-		}
-	}
-
-	WORKOUT_ENDED_SOUND := m.DefaultSounds[WORKOUT_ENDED]
-	m.play_sound(WORKOUT_ENDED_SOUND)
 }
 
 func PrintFl(format string, a ...any) {

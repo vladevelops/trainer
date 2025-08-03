@@ -1,20 +1,27 @@
 # REST between phases
 morning_exercise: -w 45s -r 15s -pr 1m {
   worm-up: -w 1m -r 15s { # owerwrides
-    squats-elbow,
-    elbow-to-knees, # owerwrides 
     jumping-open-arms, # owerwrides
+    elbow-to-knees, # owerwrides 
+    squats-elbow,
     running-on-spot,
+    bend-down-stretching,
     jumping-open-arms,
-    ground-hand-knee
-   }
-   workout: {
-     #TODO: add repeats like situps(3)
-     sit-up, weights
-   }
-   cool-down:{
-     steps
-   }
+    ground-hand-knee,
+    sit-ups,
+    stretching,
+    jumping-open-arms,
+  }
+  workout: {
+    #TODO: add repeats like situps(3)
+    weights-hands,
+    squats-weights,
+    split-squats-weights,
+    sit-up,
+  }
+  cool-down:{
+    steps
+  }
 }
 
 

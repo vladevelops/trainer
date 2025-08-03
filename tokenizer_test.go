@@ -6,13 +6,14 @@ import (
 
 func TestTokenizer(t *testing.T) {
 	tk := Tokenizer{}
-	tk.tokenize_entire_file("./my_workouts/base.tr")
+	tk.tokenize_entire_file("./my_workouts/morning_exercise.tr")
 	tk.print_tokens()
 
 }
+
 func TestPullTokens(t *testing.T) {
 	tk := Tokenizer{}
-	tk.tokenize_entire_file("./my_workouts/base.tr")
+	tk.tokenize_entire_file("./my_workouts/morning_exercise.tr")
 	tk.print_tokens()
 
 	for {

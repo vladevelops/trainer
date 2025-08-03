@@ -206,7 +206,7 @@ func (p *Parser) parse_multiple_workouts(phase *Phase) {
 
 SINGLE_WORKOUT_AFTER_CONFIG:
 	for {
-		parsed_workout := p.parse_single_workout()
+		parsed_workout := p.must_parse_single_workout()
 		phase.Workouts = append(phase.Workouts, &parsed_workout)
 		comma_or_close_brase := p.t.CheckCurentToken()
 
@@ -226,7 +226,7 @@ SINGLE_WORKOUT_AFTER_CONFIG:
 	}
 }
 
-func (p *Parser) parse_single_workout() (workout SingleWorkout) {
+func (p *Parser) must_parse_single_workout() (workout SingleWorkout) {
 
 	workout_name := p.t.PullToken()
 
@@ -246,7 +246,7 @@ func (p *Parser) parse_single_workout() (workout SingleWorkout) {
 
 		if err := p.get_and_expect_token(PUNCT_COLON); err != nil {
 			PrintFl("ERROR: %v", err)
-			return
+			panic("")
 		}
 
 		config_durations := p.parse_overwriteable_config()
@@ -257,7 +257,7 @@ func (p *Parser) parse_single_workout() (workout SingleWorkout) {
 		return workout
 	default:
 		PrintFl("ERROR:parse_single_workout: expecting PUNCT_COMMA or PUNCT_COLON got %v", colon_or_comma)
-		return
+		panic("")
 	}
 }
 
@@ -333,14 +333,12 @@ func (p *Parser) parse_overwriteable_config() (config_durations WorkoutConfigs) 
 	for {
 
 		config_token := p.t.CheckCurentToken()
-		PrintFl("config_token: %v", config_token)
 
 		// here we are getting the config token,
 		// but we have no idea witch so we cannot use `get_and_expect_token`
 		p.t.PullToken()
 
 		config_value := p.t.PullToken()
-		PrintFl("config_value: %v", config_value)
 
 		if strings.HasPrefix(config_value, "-") {
 			PrintFl("ERROR: config value cannot have `-` prefix, got: %v", config_value)
