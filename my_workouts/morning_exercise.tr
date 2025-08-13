@@ -7,9 +7,10 @@ morning_exercise: -w 45s -r 15s -pr 1m {
     running-on-spot,
     bend-down-stretching,
     jumping-open-arms,
-    ground-hand-knee,
+    squats,
     sit-ups,
     stretching,
+    neck-stretching,
     jumping-open-arms,
   }
   standing-workout: {
@@ -19,9 +20,9 @@ morning_exercise: -w 45s -r 15s -pr 1m {
     split-squats-weights,
     weights-chest-wide-arms,
     weights-hands-open,
-    split-squats-weights,
-    split-squats-weights,
-    weights-chest-wide-arms,
+    squats-weights,
+    squats-weights,
+    weights-leaning-forward,
     weights-hands-up,
     squats-weights,
   }

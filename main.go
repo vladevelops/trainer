@@ -53,6 +53,9 @@ func InitManager() *Manager {
 	}
 
 	m.init_default_sounds()
+
+	sound := m.DefaultSounds[READY_GO]
+	speaker.Init(sound.Format.SampleRate, sound.Format.SampleRate.N(time.Second/10))
 	return m
 
 }
@@ -163,7 +166,7 @@ MAIN_SESSION_LOOP:
 
 			m.play_sound(m.DefaultSounds[STARTING])
 			m.play_sound_current_session(workout.WorkoutName)
-			m.play_sound(m.DefaultSounds[READY_GO])
+			// m.play_sound(m.DefaultSounds[READY_GO])
 			workout_timer_any_accepted_time(workout.TimeWorkout)
 
 			if m.CurrentWorkoutIndex < len(phase.Workouts)-1 {
@@ -362,7 +365,6 @@ func (m *Manager) init_default_sounds() {
 
 func (m *Manager) play_sound(sound SoundStream) {
 
-	speaker.Init(sound.Format.SampleRate, sound.Format.SampleRate.N(time.Second/10))
 	done := make(chan bool)
 	speaker.Play(beep.Seq(sound.Stream, beep.Callback(func() {
 		sound.Stream.Seek(0)
