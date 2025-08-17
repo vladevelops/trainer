@@ -44,13 +44,6 @@ func (t *Tokenizer) print_tokens() {
 	fmt.Printf("Parsed tokens: %#v \n", t.tokens)
 }
 
-// type KEYWORD string
-//
-// const (
-// 	PHASES       KEYWORD = "PHASES"
-// 	WORKOUT_NAME KEYWORD = "WORKOUT_NAME"
-// )
-
 func (t *Tokenizer) chars_to_tokens(chars []string) {
 	accomulator := ""
 	char_index := 0
@@ -63,6 +56,7 @@ func (t *Tokenizer) chars_to_tokens(chars []string) {
 		// t.print_tokens()
 		// fmt.Printf("char: %#v char_index: %v \n", char, char_index)
 		switch accomulator {
+		// TODO: in theory the # have to be in default section
 		case "#":
 			for {
 				char = chars[char_index]

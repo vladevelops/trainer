@@ -5,7 +5,7 @@ morning_exercise: -w 45s -r 15s -pr 1m {
     elbow-to-knees, # owerwrides 
     squats-elbow,
     running-on-spot,
-    bend-down-stretching,
+    stretching,
     jumping-open-arms,
     squats,
     sit-ups,
@@ -26,17 +26,17 @@ morning_exercise: -w 45s -r 15s -pr 1m {
     weights-hands-up,
     squats-weights,
   }
-  ground: -w 50s {
+  ground: -w 55s {
     weights-hands-up,
     abs-legs-up-down,
     sit-ups-with-rotation,
-    plank,
+    plank: -w 1m,
     push-ups,
     swimmer,
   }
-  cool-down: -w 60s {
+  cool-down: -w 1m {
     jumping-open-arms,
-    stretching,
+    stretching: -w 2m,
   }
 }
 
